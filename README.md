@@ -1,36 +1,47 @@
-# Forecasting Electricity Consumption using ARIMA and Prophet  
+# Deploy and Scale Machine Learning Models with Keras, FastAPI, Redis and Docker Swarm
+Serve a production-ready and scalable Keras-based deep learning model image classification using FastAPI, Redis and Docker Swarm. Based off this [series of blog posts](https://www.pyimagesearch.com/2018/02/05/deep-learning-production-keras-redis-flask-apache/).
 
-This repository contains the notebook **AimaAndProphetStreamlit.ipynb**, where we analyze electricity consumption data across multiple clients.  
-We apply **ARIMA** and **Prophet** forecasting models, compare their performance, and draw meaningful conclusions about their strengths and weaknesses.  
+## How to Use
 
----
+### Prerequisites
+Make sure you have a modern version of `docker` (>1.13.0)and `docker-compose` installed.
 
-## 📊 Data Source  
-Dataset from Kaggle:  
-**Datasets for Multivariate Time Series Forecasting (Electricity consumption of 370 clients)**  
+### Run with Docker Compose
+Simply run `docker-compose up` to spin up all the services on your local machine.
 
-- Main file: `LD2011_2014.txt` (~370 clients as columns)  
-- Metadata files with variable information  
+### Test Service
+* Test the `/predict` endpoint by passing in the included `doge.jpg` as parameter `img_file`:
 
----
+```bash
+curl -X POST -F img_file=@doge.jpg http://localhost/predict
+```
 
-## 🔄 Machine Learning Life Cycle  
-1. **Data Upload** – Import and extract the dataset into the environment.  
-2. **Data Understanding** – Explore dataset structure, variables, and relationships.  
-3. **Data Preparation & Cleaning** – Handle missing values, outliers, and resampling.  
-4. **Modelling** – Apply ARIMA and Prophet models to selected client time series.  
-5. **Evaluation & Comparison** – Compare ARIMA vs Prophet using MAE, RMSE, and MAPE.  
-6. **Conclusions** – Discuss which model works better and under which conditions.  
+You should see the predictions returned as a JSON response.
 
----
+### Deploy on Docker Swarm
+Deploying this on Docker Swarm allows us to scale the model server to multiple hosts. 
 
-## 📈 Streamlit Dashboard  
+This assumes that you have a Swarm instance set up (e.g. on the cloud). Otherwise, to test this in a local environment, put your Docker engine in swarm mode with `docker swarm init`.
 
-A **Streamlit dashboard** is provided for interactive exploration. It includes four tabs:  
+* Deploy the stack on the swarm:
 
-- **Home** – Project overview and dataset introduction.  
-- **EDA** – Exploratory Data Analysis with plots and summaries.  
-- **Model Testing** – Apply ARIMA and Prophet models to sample client data.  
-- **Settings** – Configure parameters (e.g., forecast horizon, frequency).  
+```bash
+docker stack deploy -c docker-compose.yml mldeploy
+```
 
----
+* Check that it's running with `docker stack services mldeploy`. Note that the model server is unreplicated at this time. You may scale up the model worker by:
+
+```bash
+docker service scale mldeploy_modelserver=X
+```
+
+Where `X` is the number of workers you want.
+
+## Load Testing
+We can use [locust](https://locust.io) and the included `locustfile.py` to load test our service. Run the following command to spin up `20` concurrent users immediately:
+
+```bash
+locust --host=http://localhost --no-web -c 20 -r 20
+```
+
+The `--no-web` flag runs locust in CLI mode. You may also want to use locust's web interface with all its pretty graphs, if so, just run `local --host=http://localhost`.
